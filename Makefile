@@ -1,37 +1,28 @@
-# Copyright 2016 The Kubernetes Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 # The binary to build (just the basename).
+VERSION := 1.0.1
 BIN := DirtyTxtFilter
-# 转换小写
-bin := $(shell echo $(BIN) | tr A-Z a-z )
+PORT:= 8080
+BUILD_PARA:= '-tags=jsoniter'
 # Where to push the docker image.
-# REGISTRY ?= thockin
 # docker 仓库
-REGISTRY ?= 192.168.40.150:5000
-# REGISTRY ?= fabletang
-# This version-strategy uses git tags to set the version string
-VERSION := $(shell git describe --tags --always --dirty)
-#
-# This version-strategy uses a manual value to set the version string
-# VERSION := 1.0.3
-###
+REGISTRY ?= 192.168.76.172:5000
+# BASEIMAGE ?= gcr.io/distroless/static
+BASEIMAGE ?= fabletang/golang-run:alpine-3.9
+# BUILD_IMAGE ?= golang:1.12-alpine
+BUILD_IMAGE ?= fabletang/golang-compile:1.12.6
+
+### ==================================================================
 ### These variables should not need tweaking.
 ###
-
-# SRC_DIRS := cmd pkg # directories which hold app source (not vendored)
-SRC_DIRS := src pkg
+# This version-strategy uses git tags to set the version string
+#VERSION := $(shell git describe --tags --always --dirty)
+#$(subst ' ','',$(shell git rev-list HEAD --count))
+VERSION :=$(VERSION)-$(subst ' ','',$(shell git rev-list HEAD --count))
+ENV ?=dev
+# 转换小写
+bin := $(shell echo $(BIN) | tr A-Z a-z )
+# directories which hold app source (not vendored)
+SRC_DIRS := src   #src pkg
 #MAIN_DIR := src/github.com/fabletang/DirtyTxtFilter/
 MAIN_DIR := src/$(shell go list -m)
 #SRC_MAIN := /src/github.com/fabletang/DirtyTxtFilter/main.go
@@ -46,27 +37,40 @@ ALL_PLATFORMS := linux/amd64
 OS := $(if $(GOOS),$(GOOS),$(shell go env GOOS))
 ARCH := $(if $(GOARCH),$(GOARCH),$(shell go env GOARCH))
 
-# BASEIMAGE ?= gcr.io/distroless/static
-BASEIMAGE ?= fabletang/golang-run:alpine-3.9
 
 # IMAGE := $(REGISTRY)/$(BIN)
-IMAGE := $(REGISTRY)/$(bin)
+IMAGE := $(REGISTRY)/$(ENV)/$(bin)
 # IMAGE := $(REGISTRY_H):$(REGISTRY_P)/$(BIN)
-TAG := $(VERSION)__$(OS)_$(ARCH)
+TAG := $(VERSION)_$(OS)_$(ARCH)
 
-# BUILD_IMAGE ?= golang:1.12-alpine
-BUILD_IMAGE ?= fabletang/golang-compile:1.12.5
 
 var:
-	@echo BIN:$(BIN) VERSION:$(VERSION) OS:$(OS) ARCH:$(ARCH)
+	@echo ENV:$(ENV) BIN:$(BIN) VERSION:$(VERSION) OS:$(OS) ARCH:$(ARCH)
 	@echo MAIN_DIR:$(MAIN_DIR) SRC_MAIN:$(SRC_MAIN)
+	@echo docker image:$(IMAGE):$(TAG)
 # If you want to build all binaries, see the 'all-build' rule.
 # If you want to build all containers, see the 'all-container' rule.
 # If you want to build AND push all containers, see the 'all-push' rule.
-	# OS=linux \
-	# ARCH=amd64 \
+#
+help: 
+	@echo ============================使用指南===================================
+	@echo "make run"  :自动检测当前系统环境,在bin目录生成二进制以及copy res/资源文件
+	@echo "make docker"  :本地打包linux/amd64 docker镜像
+	@echo "make pushdocker"  :本地打包linux/amd64 docker镜像,并且推送到docker仓库
+	@echo ============================使用指南===================================
+
 all: build
 docker: container-linux_amd64
+pushdocker: clean push-linux_amd64	
+#run: build-$(OS)_$(ARCH) 
+#	cd bin/$(OS)_$(ARCH) && ./$(BIN)
+run: clean 
+	mkdir -p bin/$(OS)_$(ARCH)/res/ &&                   \
+	cp -r $(RES_DIR) bin/$(OS)_$(ARCH)/res/ &&           \
+	go build -o bin/$(OS)_$(ARCH)/$(BIN) $(SRC_MAIN) &&  \
+	cd bin/$(OS)_$(ARCH) && ./$(BIN)
+	
+# /bin/sh $(OUTBIN) 
 
 # For the following OS/ARCH expansions, we transform OS/ARCH into OS_ARCH
 # because make pattern rules don't match with embedded '/' characters.
@@ -124,37 +128,29 @@ $(OUTBIN): .go/$(OUTBIN).stamp
 .PHONY: .go/$(OUTBIN).stamp
 .go/$(OUTBIN).stamp: $(BUILD_DIRS)
 	@echo "making $(OUTBIN)"
-	@docker run                                                 \
-	    -it                                                      \
-	    --rm                                                    \
-	    -v $$(pwd):/goapp/src/myapp           \
-	    -w /goapp/src/myapp \
-	    --env HTTP_PROXY=$(HTTP_PROXY)                          \
-	    --env HTTPS_PROXY=$(HTTPS_PROXY)                        \
-	    -e GOOS=$(OS)     			 \
-	    -e GOARCH=$(ARCH)  \
-	    -e GOFLAGS="-mod=vendor" \
-	    -e GO111MODULE=on \
-	    -e CGO_ENABLED=0  \
-	    $(BUILD_IMAGE)                                          \
-	    go build         \
-	    -o /goapp/src/myapp/.go/$(OUTBIN)      \
+	@docker run                                         \
+	    -it                                             \
+	    --rm                                            \
+	    -v $$(pwd):/goapp/src/myapp                     \
+	    -w /goapp/src/myapp                             \
+	    --env HTTP_PROXY=$(HTTP_PROXY)                  \
+	    --env HTTPS_PROXY=$(HTTPS_PROXY)                \
+	    -e GOOS=$(OS)     			            \
+	    -e GOARCH=$(ARCH)                               \
+	    -e GOFLAGS="-mod=vendor" 	            	    \
+	    -e GO111MODULE=on                               \
+	    -e CGO_ENABLED=0                                \
+	    $(BUILD_IMAGE)                                  \
+	    go build                                        \
+	    $(BUILD_PARA)                                   \
+	    -o /goapp/src/myapp/.go/$(OUTBIN)               \
 	    $(SRC_MAIN) 
 
-	@if ! cmp -s .go/$(OUTBIN) $(OUTBIN); then \
-	    cp -r $(RES_DIR) bin/$(OS)_$(ARCH);            \
-	    mv .go/$(OUTBIN) $(OUTBIN);            \
-	    date >$@;                              \
+	@if ! cmp -s .go/$(OUTBIN) $(OUTBIN); then        \
+	    cp -r $(RES_DIR) bin/$(OS)_$(ARCH)/res/;           \
+	    mv .go/$(OUTBIN) $(OUTBIN);                   \
+	    date >$@;                                     \
 	fi
-
-
-#	    "
-#	    /bin/sh -c "                                            \
-#	        ARCH=$(ARCH)                                        \
-#	        OS=$(OS)                                            \
-#	        VERSION=$(VERSION)                                  \
-#	        ./build/build.sh                                    \
-#	     -v $$(pwd)/.go/bin/$(OS)_$(ARCH):/go/bin                \
 
 # Example: make shell CMD="-c 'date > datefile'"
 shell: $(BUILD_DIRS)
@@ -181,15 +177,14 @@ DOTFILE_IMAGE = $(subst /,_,$(BIN))-$(TAG)
 # DOTFILE_IMAGE = $(TAG)
 
 container: .container-$(DOTFILE_IMAGE) say_container_name
-# container: say_container_name
 
-# .container-$(DOTFILE_IMAGE): bin/$(OS)_$(ARCH)/$(bin) Dockerfile.in
 .container-$(DOTFILE_IMAGE): bin/$(OS)_$(ARCH)/$(BIN) Dockerfile.in
 	@echo "===== build docker ===="
 	@sed                                 \
  	    -e 's|{ARG_BIN}|$(BIN)|g'        \
 	    -e 's|{ARG_ARCH}|$(ARCH)|g'      \
 	    -e 's|{ARG_OS}|$(OS)|g'          \
+	    -e 's|{PORT}|$(PORT)|g'          \
  	    -e 's|{ARG_FROM}|$(BASEIMAGE)|g' \
 	    Dockerfile.in > .dockerfile-$(OS)_$(ARCH)
 
@@ -210,9 +205,9 @@ push: .push-$(DOTFILE_IMAGE) say_push_name
         endif
 
 say_push_name:
-        ifeq ($(OS),linux)  
+	ifeq ($(OS),linux)  
 	@echo "pushed: $(IMAGE):$(TAG)"
-        endif
+	endif
 
 manifest-list: push
 	platforms=$$(echo $(ALL_PLATFORMS) | sed 's/ /,/g');  \
@@ -232,8 +227,8 @@ test: $(BUILD_DIRS)
 	    -i                                                      \
 	    --rm                                                    \
 	    -u $$(id -u):$$(id -g)                                  \
-	    -v $$(pwd):/src                                         \
-	    -w /src                                                 \
+	    -v $$(pwd):/goapp/src/myapp                     \
+	    -w /goapp/src/myapp                             \
 	    -v $$(pwd)/.go/bin/$(OS)_$(ARCH):/go/bin                \
 	    -v $$(pwd)/.go/bin/$(OS)_$(ARCH):/go/bin/$(OS)_$(ARCH)  \
 	    -v $$(pwd)/.go/cache:/.cache                            \

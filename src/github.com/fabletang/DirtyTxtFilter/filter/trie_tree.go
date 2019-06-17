@@ -79,14 +79,14 @@ func (tree *Trie) Replace(text string, character rune) string {
 }
 
 // Replace 词语替换
-func (tree *Trie) CheckAndReplace(text string, character rune)(bool , string) {
+func (tree *Trie) CheckAndReplace(text string, character rune) (bool, string) {
 	var (
 		parent  = tree.Root
 		current *Node
 		runes   = []rune(text)
 		left    = 0
 		found   bool
-	    hasPass bool = true
+		hasPass bool = true
 	)
 
 	for position := 0; position < len(runes); position++ {
@@ -103,14 +103,14 @@ func (tree *Trie) CheckAndReplace(text string, character rune)(bool , string) {
 		if current.IsPathEnd() && left <= position {
 			for i := left; i <= position; i++ {
 				runes[i] = character
-				hasPass=false
+				hasPass = false
 			}
 		}
 
 		parent = current
 	}
 
-	return hasPass,string(runes)
+	return hasPass, string(runes)
 }
 
 // Filter 直接过滤掉字符串中的敏感词
@@ -145,8 +145,9 @@ func (tree *Trie) Filter(text string) string {
 	resultRunes = append(resultRunes, runes[left:]...)
 	return string(resultRunes)
 }
+
 // Filter 直接过滤掉字符串中的敏感词
-func (tree *Trie) CheckAndFilter(text string) (bool,string) {
+func (tree *Trie) CheckAndFilter(text string) (bool, string) {
 	var (
 		parent      = tree.Root
 		current     *Node
@@ -176,10 +177,10 @@ func (tree *Trie) CheckAndFilter(text string) (bool,string) {
 
 	resultRunes = append(resultRunes, runes[left:]...)
 	var hasPass bool = true
-	if len(resultRunes)>0 {
-		hasPass=false
+	if len(resultRunes) > 0 {
+		hasPass = false
 	}
-	return hasPass,string(resultRunes)
+	return hasPass, string(resultRunes)
 }
 
 // Validate 验证字符串是否合法，如不合法则返回false和检测到

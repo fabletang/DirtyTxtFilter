@@ -7,14 +7,16 @@ import (
 	"strings"
 	"testing"
 )
+
 var filter2 *Filter
-func init(){
+
+func init() {
 	filter2 := New()
 	err := filter2.LoadWordDict(".././res/dict/dict.txt")
 	if err != nil {
 		println("fail to load dict %v", err)
-	}else{
-	    println("init filter...")
+	} else {
+		println("init filter...")
 	}
 }
 
@@ -84,23 +86,23 @@ func TestCheckAndReplace(t *testing.T) {
 	//filter.AddWord("煞叉")
 
 	testcases := []struct {
-		Text   string
-		ExpectPass  bool
-		Expect string
+		Text       string
+		ExpectPass bool
+		Expect     string
 	}{
 		//{"😄傻",false, "傻"},
-		{"f u c k",false, "****"},
-		{"f u`c@k",false, "****"},
-		{"😄煞🦌叉",false, "**"},
-		{"😄煞(叉)",false, "**"},
-		{"😄煞（叉）",false, "**"},
-		{"😄   煞    (叉)",false, "**"},
-		{"😄   煞    (b)",false, "**"},
+		{"f u c k", false, "****"},
+		{"f u`c@k", false, "****"},
+		{"😄煞🦌叉", false, "**"},
+		{"😄煞(叉)", false, "**"},
+		{"😄煞（叉）", false, "**"},
+		{"😄   煞    (叉)", false, "**"},
+		{"😄   煞    (b)", false, "**"},
 		//{"🔪你",false, "*你"},
 	}
 
 	for _, tc := range testcases {
-		if pass, first := filter.CheckAndReplace(tc.Text,'*'); pass != tc.ExpectPass || first != tc.Expect {
+		if pass, first := filter.CheckAndReplace(tc.Text, '*'); pass != tc.ExpectPass || first != tc.Expect {
 			t.Fatalf("check and replace:%s, got %v, %s, expect %v, %s", tc.Text, pass, first, tc.ExpectPass, tc.Expect)
 		}
 	}
@@ -144,7 +146,6 @@ func TestSensitiveValidate(t *testing.T) {
 	filter.AddWord("法克油")
 	filter.AddWord("法油")
 
-
 	testcases := []struct {
 		Text        string
 		ExpectPass  bool
@@ -161,9 +162,9 @@ func TestSensitiveValidate(t *testing.T) {
 		{"法*克 油", false, "法克油"},
 		{"法🉑️油", false, "法油"},
 		{"法【】油", false, "法油"},
-		{"法😁油",  false,"法油"},
-		{"法（油）",  false,"法油"},
-		{"^_^",  true,""},
+		{"法😁油", false, "法油"},
+		{"法（油）", false, "法油"},
+		{"^_^", true, ""},
 	}
 
 	for _, tc := range testcases {
@@ -218,7 +219,6 @@ func BenchmarkSensitiveValidate(b *testing.B) {
 	filter.AddWord("法克油")
 	filter.AddWord("法油")
 
-
 	testcases := []struct {
 		Text        string
 		ExpectPass  bool
@@ -235,7 +235,7 @@ func BenchmarkSensitiveValidate(b *testing.B) {
 		{"法*克 油", false, "法克油"},
 		{"法🉑️油", false, "法油"},
 		{"法【】油", false, "法油"},
-		{"法😁油",  false,"法油"},
+		{"法😁油", false, "法油"},
 	}
 
 	for _, tc := range testcases {
@@ -245,7 +245,6 @@ func BenchmarkSensitiveValidate(b *testing.B) {
 	}
 
 }
-
 
 func TestSensitiveReplace(t *testing.T) {
 	filter := New()

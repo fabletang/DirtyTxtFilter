@@ -75,7 +75,9 @@ func (filter *Filter) Load(rd io.Reader) error {
 
 	return nil
 }
+
 var hzRegexp = regexp.MustCompile("^[\u4e00-\u9fa5]$")
+
 //标点符号
 //var punctuationRegEx = "[`~☆★!@#$%^&*()+=|{}':;,\\[\\]》·.<>/?~！@#￥%……（）——+|{}【】‘；：”“’。，、？]";
 
@@ -101,10 +103,10 @@ func (filter *Filter) FilterEmojiAndNotChinese(content string) string {
 		if size <= 3 {
 			//new_content += string(value)
 			//过滤非中文字符
-			if hzRegexp.MatchString(string(value)){
+			if hzRegexp.MatchString(string(value)) {
 				builder.WriteRune(value)
 			}
-		}else{
+		} else {
 			//println(string(value))
 		}
 	}
@@ -136,67 +138,69 @@ func (filter *Filter) AddWord(words ...string) {
 func (filter *Filter) Filter(text string) string {
 	return filter.trie.Filter(text)
 }
+
 // Filter 过滤敏感词
-func (filter *Filter) CheckAndFilter(text string)(haspass bool,rs string) {
+func (filter *Filter) CheckAndFilter(text string) (haspass bool, rs string) {
 	tmp := filter.RemoveNoise(text)
-	if len(tmp)<1{
+	if len(tmp) < 1 {
 		//println("==all 字符")
-	   return true,""
+		return true, ""
 	}
 	//过滤表情符号以及非中文字符
-	tmp=filter.FilterEmojiAndNotChinese(tmp)
-	if len(tmp)<1{
+	tmp = filter.FilterEmojiAndNotChinese(tmp)
+	if len(tmp) < 1 {
 		//println("==all 表情符")
-		return true,""
+		return true, ""
 	}
 	//过滤中文
-	haspass,rs=filter.trie.CheckAndFilter(tmp)
+	haspass, rs = filter.trie.CheckAndFilter(tmp)
 	//没有找到,试图匹配英文
 	if haspass {
 		tmp = filter.RemoveNoise(text)
-		if len(tmp)<1{
-			return true,""
+		if len(tmp) < 1 {
+			return true, ""
 		}
 		//过滤表情符号
-		tmp=filter.FilterEmoji(tmp)
-		if len(tmp)<1{
-			return true,""
+		tmp = filter.FilterEmoji(tmp)
+		if len(tmp) < 1 {
+			return true, ""
 		}
-		haspass,rs=filter.trie.CheckAndFilter(tmp)
+		haspass, rs = filter.trie.CheckAndFilter(tmp)
 	}
 	return
 }
 
 // Filter 检测并且替换敏感词
-func (filter *Filter) CheckAndReplace(text string,replace rune)(haspass bool,rs string) {
+func (filter *Filter) CheckAndReplace(text string, replace rune) (haspass bool, rs string) {
 	tmp := filter.RemoveNoise(text)
-	if len(tmp)<1{
+	if len(tmp) < 1 {
 		//println("==all 字符")
-		return true,""
+		return true, ""
 	}
 	//过滤表情符号以及非中文字符
-	tmp=filter.FilterEmojiAndNotChinese(tmp)
+	tmp = filter.FilterEmojiAndNotChinese(tmp)
 	//if len(tmp)<1{
 	//	println("==all 表情符")
 	//	return true,""
 	//}
 	//过滤中文
-	haspass,rs=filter.trie.CheckAndReplace(tmp,replace)
+	haspass, rs = filter.trie.CheckAndReplace(tmp, replace)
 	//没有找到,试图匹配英文
 	if haspass {
 		tmp = filter.RemoveNoise(text)
-		if len(tmp)<1{
-			return true,""
+		if len(tmp) < 1 {
+			return true, ""
 		}
 		//过滤表情符号
-		tmp=filter.FilterEmoji(tmp)
-		if len(tmp)<1{
-			return true,""
+		tmp = filter.FilterEmoji(tmp)
+		if len(tmp) < 1 {
+			return true, ""
 		}
-		haspass,rs=filter.trie.CheckAndReplace(tmp,replace)
+		haspass, rs = filter.trie.CheckAndReplace(tmp, replace)
 	}
 	return
 }
+
 // Replace 和谐敏感词
 func (filter *Filter) Replace(text string, repl rune) string {
 	return filter.trie.Replace(text, repl)
@@ -217,7 +221,7 @@ func (filter *Filter) FindAll(text string) []string {
 func (filter *Filter) Validate(text string) (bool, string) {
 	text = filter.RemoveNoise(text)
 	//过滤表情符号
-	text=filter.FilterEmojiAndNotChinese(text)
+	text = filter.FilterEmojiAndNotChinese(text)
 	return filter.trie.Validate(text)
 }
 
